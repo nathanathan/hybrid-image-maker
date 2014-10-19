@@ -1,9 +1,36 @@
+/*
+JS-Fourier-Image-Analysis LICENCE file from:
+https://github.com/turbomaze/JS-Fourier-Image-Analysis/tree/6456573152517a8e97eaa1cf371758170cbe5b78
+
+MIT License (MIT)
+
+Copyright (c) 2014 Anthony Liu 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 /******************\
 |   Fourier Image  |
 | @author Anthony  |
-| @version 1.0.1   |
+| @version 1.0.2   |
 | @date 2014/06/14 |
 | @edit 2014/06/15 |
+| @edited by Nathan to take loadImage out of closure |
 \******************/
 
 /**********
@@ -24,53 +51,54 @@ var h_; //h prime, the reconstructed h values
 
 /******************
  * work functions */
+function loadImage(loc) {
+    var start = +new Date();
+
+    //placed in a callback so the UI has a chance to update
+    disableButtons(function() {
+        //draw the initial image
+        var img = new Image();
+        img.addEventListener('load', function() {
+            //make each canvas the image's exact size
+            dims[0] = img.width;
+            dims[1] = img.height;
+            for (var ai = 0; ai < 4; ai++) {
+                canvases[ai] = $s('#canvas'+ai);
+                canvases[ai].width = dims[0], canvases[ai].height = dims[1];
+                ctxs[ai] = canvases[ai].getContext('2d');
+            }
+
+            //draw the image to the canvas
+            ctxs[0].drawImage(img, 0, 0, img.width, img.height);
+
+            //grab the pixels
+            var imageData = ctxs[0].getImageData(0, 0, dims[0], dims[1]);
+            var h_es = []; //the h values
+            for (var ai = 0; ai < imageData.data.length; ai+=4) {
+                //greyscale, so you only need every 4th value
+                h_es.push(imageData.data[ai]);
+            }
+
+            //initialize the h values
+            h = function(n, m) {
+                if (arguments.length === 0) return h_es;
+
+                var idx = n*dims[0] + m;
+                return h_es[idx];
+            }; //create it in function form to make the code match the math
+
+            enableButtons();
+
+            var duration = +new Date() - start;
+            console.log('It took '+duration+'ms to draw the image.');
+        });
+        img.crossOrigin = "anonymous";
+        img.src = loc;
+    });
+}
+ 
 function initFourierImage() {
     //event listeners
-    function loadImage(loc) {
-        var start = +new Date();
-
-        //placed in a callback so the UI has a chance to update
-        disableButtons(function() {
-            //draw the initial image
-            var img = new Image();
-            img.addEventListener('load', function() {
-                //make each canvas the image's exact size
-                dims[0] = img.width;
-                dims[1] = img.height;
-                for (var ai = 0; ai < 4; ai++) {
-                    canvases[ai] = $s('#canvas'+ai);
-                    canvases[ai].width = dims[0], canvases[ai].height = dims[1];
-                    ctxs[ai] = canvases[ai].getContext('2d');
-                }
-
-                //draw the image to the canvas
-                ctxs[0].drawImage(img, 0, 0, img.width, img.height);
-
-                //grab the pixels
-                var imageData = ctxs[0].getImageData(0, 0, dims[0], dims[1]);
-                var h_es = []; //the h values
-                for (var ai = 0; ai < imageData.data.length; ai+=4) {
-                    //greyscale, so you only need every 4th value
-                    h_es.push(imageData.data[ai]);
-                }
-
-                //initialize the h values
-                h = function(n, m) {
-                    if (arguments.length === 0) return h_es;
-
-                    var idx = n*dims[0] + m;
-                    return h_es[idx];
-                }; //create it in function form to make the code match the math
-
-                enableButtons();
-
-                var duration = +new Date() - start;
-                console.log('It took '+duration+'ms to draw the image.');
-            });
-            img.crossOrigin = "anonymous";
-            img.src = loc;
-        });
-    }
     $s('#draw-cs-btn').addEventListener('click', function() {
         loadImage('cs.png');
     });
